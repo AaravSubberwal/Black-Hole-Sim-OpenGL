@@ -1,0 +1,7 @@
+/build/
+*.o
+*.exe
+
+.vscode/
+.vs/
+*.swp
