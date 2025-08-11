@@ -8,51 +8,103 @@
 #include "shader.h"
 #include "BlackHole.h"
 
+glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 5.0f);
+glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
+glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
+
+float deltaTime = 0.0f;
+float lastFrame = 0.0f;
+
+float lastX = 1280.0f;
+float lastY = 800.0f;
+float yaw = -90.0f;
+float pitch = 0.0f;
+bool firstMouse = true;
+
+void mouse_callback(GLFWwindow* window, double xpos, double ypos)
+{
+    if (firstMouse)
+    {
+        lastX = xpos;
+        lastY = ypos;
+        firstMouse = false;
+    }
+
+    float xoffset = xpos - lastX;
+    float yoffset = lastY - ypos;
+    lastX = xpos;
+    lastY = ypos;
+
+    float sensitivity = 0.1f;
+    xoffset *= sensitivity;
+    yoffset *= sensitivity;
+
+    yaw += xoffset;
+    pitch += yoffset;
+
+    if (pitch > 89.0f)
+        pitch = 89.0f;
+    if (pitch < -89.0f)
+        pitch = -89.0f;
+
+    glm::vec3 front;
+    front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
+    front.y = sin(glm::radians(pitch));
+    front.z = sin(glm::radians(yaw)) * cos(glm::radians(pitch));
+    cameraFront = glm::normalize(front);
+}
+
+void processInput(GLFWwindow* window)
+{
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+        glfwSetWindowShouldClose(window, true);
+
+    float cameraSpeed = 2.5f * deltaTime;
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+        cameraPos += cameraSpeed * cameraFront;
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        cameraPos -= cameraSpeed * cameraFront;
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+}
+
 int main()
 {
     Window window;
     
-    glEnable(GL_MULTISAMPLE);
+    glfwSetCursorPosCallback(window.p_GLFWwindow(), mouse_callback);
     
-    Shader blackHoleShader("vertexShader.glsl", "fragmentShader.glsl");
+    int renderWidth = 512;
+    int renderHeight = 512;
     
-    glm::mat4 projection = glm::ortho(0.0f, (float)window.getWidth(), 
-                                      (float)window.getHeight(), 0.0f, 
-                                      -1.0f, 1.0f);
+    Shader computeShader("computeShader.glsl");
+    Shader screenShader("vertexShader.glsl", "fragmentShader.glsl");
     
-    BlackHole blackhole(glm::vec2(window.getWidth() / 2.0f, window.getHeight() / 2.0f), 100.0f);
+    BlackHole blackHole(glm::vec3(0.0f, 0.0f, 0.0f), 1.0f, renderWidth, renderHeight);
     
     while (!glfwWindowShouldClose(window.p_GLFWwindow()))
     {
-        if (glfwGetKey(window.p_GLFWwindow(), GLFW_KEY_ESCAPE) == GLFW_PRESS)
-            glfwSetWindowShouldClose(window.p_GLFWwindow(), true);
+        float currentFrame = glfwGetTime();
+        deltaTime = currentFrame - lastFrame;
+        lastFrame = currentFrame;
         
-        float moveSpeed = 5.0f;
-        glm::vec2 pos = blackhole.getPosition();
+        processInput(window.p_GLFWwindow());
         
-        if (glfwGetKey(window.p_GLFWwindow(), GLFW_KEY_LEFT) == GLFW_PRESS)
-            pos.x -= moveSpeed;
-        if (glfwGetKey(window.p_GLFWwindow(), GLFW_KEY_RIGHT) == GLFW_PRESS)
-            pos.x += moveSpeed;
-        if (glfwGetKey(window.p_GLFWwindow(), GLFW_KEY_UP) == GLFW_PRESS)
-            pos.y -= moveSpeed;
-        if (glfwGetKey(window.p_GLFWwindow(), GLFW_KEY_DOWN) == GLFW_PRESS)
-            pos.y += moveSpeed;
-            
-        blackhole.setPosition(pos);
+        glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
+        glm::mat4 projection = glm::perspective(glm::radians(45.0f), 
+                                              (float)window.getWidth() / (float)window.getHeight(), 
+                                              0.1f, 100.0f);
+        glm::mat4 invProjection = glm::inverse(projection);
+        glm::mat4 invView = glm::inverse(view);
         
-        if (glfwGetKey(window.p_GLFWwindow(), GLFW_KEY_EQUAL) == GLFW_PRESS)
-            blackhole.setRadius(blackhole.getRadius() + 1.0f);
-        if (glfwGetKey(window.p_GLFWwindow(), GLFW_KEY_MINUS) == GLFW_PRESS)
-            blackhole.setRadius(std::max(10.0f, blackhole.getRadius() - 1.0f));
+        blackHole.compute(computeShader, invProjection, invView, cameraPos);
         
-        glClearColor(0.2f, 0.3f, 0.3f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
         
-        blackHoleShader.bind();
-        blackHoleShader.setUniformMatrix4fv("projection", projection);
-        blackHoleShader.setUniform4f("color", 1.0f, 0.5f, 0.2f, 1.0f);
-        blackhole.draw(blackHoleShader);
+        blackHole.draw(screenShader);
         
         glfwSwapBuffers(window.p_GLFWwindow());
         glfwPollEvents();

@@ -1,6 +1,4 @@
 #pragma once
-#include <vector>
-#include <cmath>
 #include <glad/glad.h>
 #include <glm/glm.hpp>
 #include "shader.h"
@@ -8,23 +6,29 @@
 class BlackHole
 {
 private:
-    glm::vec2 position;
+    glm::vec3 position;
     float radius;
-    unsigned int VAO, VBO, EBO;
-    std::vector<float> vertices;
-    std::vector<unsigned int> indices;
-    unsigned int segments;
     
-    void generateCircle();
-    void setupMesh();
+    unsigned int outputTexture;
+    unsigned int screenVAO, screenVBO;
+    
+    int textureWidth;
+    int textureHeight;
+    
+    void createOutputTexture();
+    void createScreenQuad();
     
 public:
-    BlackHole(glm::vec2 pos, float r, unsigned int segs = 64);
+    BlackHole(glm::vec3 pos, float r, int width, int height);
     ~BlackHole();
     
-    void draw(Shader& shader);
-    void setPosition(glm::vec2 pos);
-    void setRadius(float r);
-    glm::vec2 getPosition() const { return position; }
+    void compute(Shader& computeShader, const glm::mat4& invProjection, const glm::mat4& invView, const glm::vec3& cameraPos);
+    void draw(Shader& screenShader);
+    
+    void setPosition(glm::vec3 pos) { position = pos; }
+    void setRadius(float r) { radius = r; }
+    glm::vec3 getPosition() const { return position; }
     float getRadius() const { return radius; }
+    
+    unsigned int getOutputTexture() const { return outputTexture; }
 };

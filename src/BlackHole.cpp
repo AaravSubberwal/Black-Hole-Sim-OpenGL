@@ -1,100 +1,84 @@
 #include "BlackHole.h"
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846
-#endif
-
-BlackHole::BlackHole(glm::vec2 pos, float r, unsigned int segs)
-    : position(pos), radius(r), segments(segs), VAO(0), VBO(0), EBO(0)
+BlackHole::BlackHole(glm::vec3 pos, float r, int width, int height) 
+    : position(pos), radius(r), textureWidth(width), textureHeight(height)
 {
-    generateCircle();
-    setupMesh();
+    createOutputTexture();
+    createScreenQuad();
 }
 
 BlackHole::~BlackHole()
 {
-    glDeleteVertexArrays(1, &VAO);
-    glDeleteBuffers(1, &VBO);
-    glDeleteBuffers(1, &EBO);
+    glDeleteTextures(1, &outputTexture);
+    glDeleteVertexArrays(1, &screenVAO);
+    glDeleteBuffers(1, &screenVBO);
 }
 
-void BlackHole::generateCircle()
+void BlackHole::createOutputTexture()
 {
-    vertices.clear();
-    indices.clear();
-
-    vertices.push_back(position.x);
-    vertices.push_back(position.y);
-    vertices.push_back(0.0f);
-
-    float angleStep = 2.0f * M_PI / segments;
-    for (unsigned int i = 0; i <= segments; i++)
-    {
-        float angle = i * angleStep;
-        float x = position.x + radius * cos(angle);
-        float y = position.y + radius * sin(angle);
-
-        vertices.push_back(x);
-        vertices.push_back(y);
-        vertices.push_back(0.0f);
-    }
-
-    for (unsigned int i = 1; i <= segments; i++)
-    {
-        indices.push_back(0);
-        indices.push_back(i);
-        indices.push_back(i + 1);
-    }
+    glGenTextures(1, &outputTexture);
+    glBindTexture(GL_TEXTURE_2D, outputTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, textureWidth, textureHeight, 0, GL_RGBA, GL_FLOAT, NULL);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glBindTexture(GL_TEXTURE_2D, 0);
 }
 
-void BlackHole::setupMesh()
+void BlackHole::createScreenQuad()
 {
-    glGenVertexArrays(1, &VAO);
-    glGenBuffers(1, &VBO);
-    glGenBuffers(1, &EBO);
-
-    glBindVertexArray(VAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float),
-                 vertices.data(), GL_STATIC_DRAW);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, EBO);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, indices.size() * sizeof(unsigned int),
-                 indices.data(), GL_STATIC_DRAW);
-
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void *)0);
+    float quadVertices[] = {
+        -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+        -1.0f, -1.0f, 0.0f, 0.0f, 0.0f,
+         1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+         
+        -1.0f,  1.0f, 0.0f, 0.0f, 1.0f,
+         1.0f, -1.0f, 0.0f, 1.0f, 0.0f,
+         1.0f,  1.0f, 0.0f, 1.0f, 1.0f
+    };
+    
+    glGenVertexArrays(1, &screenVAO);
+    glGenBuffers(1, &screenVBO);
+    
+    glBindVertexArray(screenVAO);
+    glBindBuffer(GL_ARRAY_BUFFER, screenVBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(quadVertices), &quadVertices, GL_STATIC_DRAW);
+    
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
-
+    
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+    
     glBindVertexArray(0);
 }
 
-void BlackHole::draw(Shader &shader)
+void BlackHole::compute(Shader& computeShader, const glm::mat4& invProjection, const glm::mat4& invView, const glm::vec3& cameraPos)
 {
-    shader.bind();
-    glBindVertexArray(VAO);
-    glDrawElements(GL_TRIANGLES, indices.size(), GL_UNSIGNED_INT, 0);
+    computeShader.bind();
+    
+    computeShader.setUniform3fv("sphereCenter", position);
+    computeShader.setUniform1f("sphereRadius", radius);
+    computeShader.setUniform3fv("cameraPos", cameraPos);
+    computeShader.setUniformMatrix4fv("invProjection", invProjection);
+    computeShader.setUniformMatrix4fv("invView", invView);
+    
+    glBindImageTexture(0, outputTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+    
+    computeShader.dispatch((textureWidth + 7) / 8, (textureHeight + 7) / 8, 1);
+    computeShader.memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
+}
+
+void BlackHole::draw(Shader& screenShader)
+{
+    screenShader.bind();
+    screenShader.setUniform1i("screenTexture", 0);
+    
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, outputTexture);
+    
+    glBindVertexArray(screenVAO);
+    glDrawArrays(GL_TRIANGLES, 0, 6);
     glBindVertexArray(0);
-}
-
-void BlackHole::setPosition(glm::vec2 pos)
-{
-    position = pos;
-    generateCircle();
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float),
-                 vertices.data(), GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-}
-
-void BlackHole::setRadius(float r)
-{
-    radius = r;
-    generateCircle();
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, vertices.size() * sizeof(float),
-                 vertices.data(), GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
 }
