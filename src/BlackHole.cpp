@@ -54,7 +54,8 @@ void BlackHole::createScreenQuad()
     glBindVertexArray(0);
 }
 
-void BlackHole::compute(Shader& computeShader, const glm::mat4& invProjection, const glm::mat4& invView, const glm::vec3& cameraPos)
+void BlackHole::setupCompute(Shader& computeShader, const glm::mat4& invProjection, 
+                             const glm::mat4& invView, const glm::vec3& cameraPos)
 {
     computeShader.bind();
     
@@ -65,9 +66,6 @@ void BlackHole::compute(Shader& computeShader, const glm::mat4& invProjection, c
     computeShader.setUniformMatrix4fv("invView", invView);
     
     glBindImageTexture(0, outputTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
-    
-    computeShader.dispatch((textureWidth + 7) / 8, (textureHeight + 7) / 8, 1);
-    computeShader.memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
 }
 
 void BlackHole::draw(Shader& screenShader)

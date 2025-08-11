@@ -15,14 +15,14 @@ private:
                                      const char *message, const void *userParam);
     
     GLFWwindow *window;
-    const unsigned int WIN_WIDTH = 512;
-    const unsigned int WIN_HEIGTH = 512;
+    const unsigned int WIN_WIDTH;
+    const unsigned int WIN_HEIGTH;
 
 public:
     inline GLFWwindow *p_GLFWwindow() { return window; }
     inline unsigned int getWidth() { return WIN_WIDTH; }
     inline unsigned int getHeight() { return WIN_HEIGTH; }
 
-    Window();
+    Window(const unsigned int width, const unsigned int height);
     ~Window();
 };

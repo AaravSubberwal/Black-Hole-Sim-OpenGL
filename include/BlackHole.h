@@ -22,7 +22,7 @@ public:
     BlackHole(glm::vec3 pos, float r, int width, int height);
     ~BlackHole();
     
-    void compute(Shader& computeShader, const glm::mat4& invProjection, const glm::mat4& invView, const glm::vec3& cameraPos);
+    void setupCompute(Shader& computeShader, const glm::mat4& invProjection, const glm::mat4& invView, const glm::vec3& cameraPos);
     void draw(Shader& screenShader);
     
     void setPosition(glm::vec3 pos) { position = pos; }

@@ -9,6 +9,11 @@ uniform vec3 cameraPos;
 uniform mat4 invProjection;
 uniform mat4 invView;
 
+uniform vec3 starCenter;
+uniform float starRadius;
+uniform vec3 starEmissionColor;
+uniform float starIntensity;
+
 struct Ray {
     vec3 origin;
     vec3 direction;
@@ -53,11 +58,11 @@ bool intersectSphere(Ray ray, vec3 center, float radius, out float t) {
 }
 
 vec3 calculateLighting(vec3 hitPoint, vec3 normal, vec3 viewDir) {
-    vec3 lightPos = vec3(5.0, 5.0, 5.0);
-    vec3 lightColor = vec3(1.0);
-    vec3 objectColor = vec3(1.0, 0.5, 0.31);
+    vec3 lightPos = starCenter;
+    vec3 lightColor = starEmissionColor * starIntensity;
+    vec3 objectColor = vec3(0.1, 0.1, 0.1);
     
-    float ambientStrength = 0.1;
+    float ambientStrength = 0.02;
     vec3 ambient = ambientStrength * lightColor;
     
     vec3 lightDir = normalize(lightPos - hitPoint);
@@ -86,13 +91,19 @@ void main() {
     
     Ray ray = generateRay(ndc);
     
-    vec3 color = vec3(0.1);
+    vec3 color = vec3(0.0);
     
-    float t;
-    if (intersectSphere(ray, sphereCenter, sphereRadius, t)) {
-        vec3 hitPoint = ray.origin + ray.direction * t;
+    float t_sphere, t_star;
+    bool hit_sphere = intersectSphere(ray, sphereCenter, sphereRadius, t_sphere);
+    bool hit_star = intersectSphere(ray, starCenter, starRadius, t_star);
+    
+    if (hit_sphere && (!hit_star || t_sphere < t_star)) {
+        vec3 hitPoint = ray.origin + ray.direction * t_sphere;
         vec3 normal = normalize(hitPoint - sphereCenter);
         color = calculateLighting(hitPoint, normal, -ray.direction);
+    }
+    else if (hit_star) {
+        color = starEmissionColor * starIntensity;
     }
     
     imageStore(outputImage, pixelCoord, vec4(color, 1.0));

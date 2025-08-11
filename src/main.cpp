@@ -7,6 +7,10 @@
 #include "Window.h"
 #include "shader.h"
 #include "BlackHole.h"
+#include "Star.h"
+
+const int RENDER_WIDTH = 512;
+const int RENDER_HEIGHT = 512;
 
 glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 5.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
@@ -15,8 +19,8 @@ glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
 
-float lastX = 1280.0f;
-float lastY = 800.0f;
+float lastX = RENDER_WIDTH / 2.0f;
+float lastY = RENDER_HEIGHT / 2.0f;
 float yaw = -90.0f;
 float pitch = 0.0f;
 bool firstMouse = true;
@@ -31,7 +35,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos)
     }
 
     float xoffset = xpos - lastX;
-    float yoffset = lastY - ypos;
+    float yoffset = ypos - lastY;  // Changed from lastY - ypos
     lastX = xpos;
     lastY = ypos;
 
@@ -68,21 +72,23 @@ void processInput(GLFWwindow* window)
         cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+        cameraPos -= cameraSpeed * cameraUp;  // Changed from +
+    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+        cameraPos += cameraSpeed * cameraUp;  // Changed from -
 }
 
 int main()
 {
-    Window window;
+    Window window(RENDER_WIDTH, RENDER_HEIGHT);
     
     glfwSetCursorPosCallback(window.p_GLFWwindow(), mouse_callback);
-    
-    int renderWidth = 512;
-    int renderHeight = 512;
     
     Shader computeShader("computeShader.glsl");
     Shader screenShader("vertexShader.glsl", "fragmentShader.glsl");
     
-    BlackHole blackHole(glm::vec3(0.0f, 0.0f, 0.0f), 1.0f, renderWidth, renderHeight);
+    Star star(glm::vec3(3.0f, 2.0f, -5.0f), 1.5f, glm::vec3(1.0f, 0.9f, 0.7f), 2.0f);
+    BlackHole blackHole(glm::vec3(0.0f, 0.0f, 0.0f), star.getRadius() / 3.0f, RENDER_WIDTH, RENDER_HEIGHT);
     
     while (!glfwWindowShouldClose(window.p_GLFWwindow()))
     {
@@ -99,7 +105,15 @@ int main()
         glm::mat4 invProjection = glm::inverse(projection);
         glm::mat4 invView = glm::inverse(view);
         
-        blackHole.compute(computeShader, invProjection, invView, cameraPos);
+        blackHole.setupCompute(computeShader, invProjection, invView, cameraPos);
+        
+        computeShader.setUniform3fv("starCenter", star.getPosition());
+        computeShader.setUniform1f("starRadius", star.getRadius());
+        computeShader.setUniform3fv("starEmissionColor", star.getEmissionColor());
+        computeShader.setUniform1f("starIntensity", star.getIntensity());
+        
+        computeShader.dispatch((RENDER_WIDTH + 7) / 8, (RENDER_HEIGHT + 7) / 8, 1);
+        computeShader.memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         
         glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT);
