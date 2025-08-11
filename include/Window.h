@@ -10,9 +10,13 @@ class Window
 {
 private:
     static void framebuffer_size_callback(GLFWwindow *window, int width, int height);
+    static void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, 
+                                     GLenum severity, GLsizei length, 
+                                     const char *message, const void *userParam);
+    
     GLFWwindow *window;
-    const unsigned int WIN_WIDTH = 1920;
-    const unsigned int WIN_HEIGTH = 1080;
+    const unsigned int WIN_WIDTH = 512;
+    const unsigned int WIN_HEIGTH = 512;
 
 public:
     inline GLFWwindow *p_GLFWwindow() { return window; }

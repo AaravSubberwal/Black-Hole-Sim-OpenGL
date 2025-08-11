@@ -20,6 +20,10 @@ set(SOURCES ${SOURCES} ${CMAKE_SOURCE_DIR}/libs/glad/src/glad.c)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
+target_compile_definitions(BlackHoleSim PRIVATE
+    $<$<CONFIG:Debug>:DEBUG>
+)
+
 target_link_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/libs/glfw/lib)
 target_link_libraries(${PROJECT_NAME} 
     glfw3
