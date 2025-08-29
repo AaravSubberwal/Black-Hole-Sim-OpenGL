@@ -1,5 +1,6 @@
 #pragma once
 #include <glm/glm.hpp>
+#include "shader.h"
 
 class Star
 {
@@ -9,9 +10,12 @@ private:
     glm::vec3 emissionColor;
     float intensity;
     
+    Shader *p_computeShader;
 public:
-    Star(glm::vec3 pos, float r, glm::vec3 color, float intens = 1.0f);
+    Star(Shader *p_computeShader, glm::vec3 pos, float r, glm::vec3 color, float intens = 1.0f);
     ~Star() = default;
+
+    void setupCompute(Shader computeShader);
     
     void setPosition(glm::vec3 pos) { position = pos; }
     void setRadius(float r) { radius = r; }

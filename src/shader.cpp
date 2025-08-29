@@ -2,7 +2,7 @@
 
 using namespace std;
 
-Shader::Shader(const std::string &vertexPath, const std::string &fragmentPath) : isComputeShader(false)
+Shader::Shader(const std::string &vertexPath, const std::string &fragmentPath, glm::ivec2 resolutionVector) : isComputeShader(false), resolutionVector(resolutionVector)
 {
     std::string vertexShader = readFromFile(vertexPath);
     std::string fragmentShader = readFromFile(fragmentPath);
@@ -13,7 +13,7 @@ Shader::Shader(const std::string &vertexPath, const std::string &fragmentPath) :
     }
 }
 
-Shader::Shader(const std::string &computePath) : isComputeShader(true)
+Shader::Shader(const std::string &computePath, glm::ivec2 resolutionVector) : isComputeShader(true), resolutionVector(resolutionVector)
 {
     std::string computeShader = readFromFile(computePath);
     ID = createComputeShader(computeShader);
@@ -178,6 +178,12 @@ void Shader::setUniform1i(const std::string &name, int value)
 {
     bind();
     glUniform1i(getUniformLocations(name), value);
+}
+
+void Shader::setUniform2i(const std::string &name, const glm::ivec2 &value)
+{
+    bind();
+    glUniform2i(getUniformLocations(name), value.x, value.y);
 }
 
 void Shader::setUniformMatrix4fv(const std::string &name, glm::mat4 mat, bool transpose)

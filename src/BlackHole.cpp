@@ -1,6 +1,6 @@
 #include "BlackHole.h"
 
-BlackHole::BlackHole(glm::vec3 pos, float r, int width, int height) 
+BlackHole::BlackHole(Shader *p_computeShader, glm::vec3 pos, float r, int width, int height) 
     : position(pos), radius(r), textureWidth(width), textureHeight(height)
 {
     createOutputTexture();
@@ -72,7 +72,6 @@ void BlackHole::setupCompute(Shader& computeShader)
 
 void BlackHole::draw(Shader& screenShader)
 {
-    screenShader.bind();
     screenShader.setUniform1i("screenTexture", 0);
     
     glActiveTexture(GL_TEXTURE0);

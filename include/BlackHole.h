@@ -17,9 +17,10 @@ private:
     
     void createOutputTexture();
     void createScreenQuad();
+    Shader *p_computeShader;
     
 public:
-    BlackHole(glm::vec3 pos, float r, int width, int height);
+    BlackHole(Shader *p_computeShader, glm::vec3 pos, float r, int width, int height);
     ~BlackHole();
     
     void setupCompute(Shader& computeShader);

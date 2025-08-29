@@ -81,17 +81,27 @@ void processInput(GLFWwindow* window)
 int main()
 {
     Window window(RENDER_WIDTH, RENDER_HEIGHT);
+    glm::ivec2 resolutionVector = glm::ivec2(RENDER_WIDTH, RENDER_HEIGHT);
     
     glfwSetCursorPosCallback(window.p_GLFWwindow(), mouse_callback);
     
-    Shader computeShader("res/computeShader.glsl");
-    glm::vec2 resolutionVector = glm::vec2(RENDER_WIDTH, RENDER_HEIGHT);
-    computeShader.setUniform2fv("resolutionVector", resolutionVector);
-    Shader screenShader("res/vertexShader.glsl", "res/fragmentShader.glsl");
+    Shader computeShader("res/computeShader.glsl", resolutionVector);
+    Shader *p_computeShader = &computeShader;
     
-    Star star(glm::vec3(3.0f, 2.0f, -5.0f), 1.5f, glm::vec3(1.0f, 0.9f, 0.7f), 2.0f);
-    BlackHole blackHole(glm::vec3(0.0f, 0.0f, 0.0f), star.getRadius() / 3.0f, RENDER_WIDTH, RENDER_HEIGHT);
+    Shader screenShader("res/vertexShader.glsl", "res/fragmentShader.glsl", resolutionVector);
     
+    Star star(p_computeShader, glm::vec3(3.0f, 2.0f, -5.0f), 1.5f, glm::vec3(1.0f, 0.9f, 0.7f), 2.0f);
+    BlackHole blackHole(p_computeShader, glm::vec3(0.0f, 0.0f, 0.0f), star.getRadius() / 3.0f, RENDER_WIDTH, RENDER_HEIGHT);
+    
+    
+    glm::mat4 projection = glm::perspective(glm::radians(45.0f), 
+    (float)window.getWidth() / (float)window.getHeight(), 
+    0.1f, 100.0f);
+    glm::mat4 invProjection = glm::inverse(projection);
+    
+    computeShader.setUniform2i("resolutionVector", resolutionVector);
+    computeShader.setUniformMatrix4fv("invProjection", invProjection);
+
     while (!glfwWindowShouldClose(window.p_GLFWwindow()))
     {
         float currentFrame = glfwGetTime();
@@ -101,26 +111,16 @@ int main()
         processInput(window.p_GLFWwindow());
         
         glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
-        glm::mat4 projection = glm::perspective(glm::radians(45.0f), 
-                                              (float)window.getWidth() / (float)window.getHeight(), 
-                                              0.1f, 100.0f);
-        glm::mat4 invProjection = glm::inverse(projection);
         glm::mat4 invView = glm::inverse(view);
         
         blackHole.setupCompute(computeShader);
         computeShader.setUniform3fv("cameraPos", cameraPos);
-        computeShader.setUniformMatrix4fv("invProjection", invProjection);
         computeShader.setUniformMatrix4fv("invView", invView);
     
-        computeShader.setUniform3fv("starCenter", star.getPosition());
-        computeShader.setUniform1f("starRadius", star.getRadius());
-        computeShader.setUniform3fv("starEmissionColor", star.getEmissionColor());
-        computeShader.setUniform1f("starIntensity", star.getIntensity());
-        
         computeShader.dispatch((RENDER_WIDTH + 15) / 16, (RENDER_HEIGHT + 15) / 16, 1);
         computeShader.memoryBarrier(GL_SHADER_IMAGE_ACCESS_BARRIER_BIT);
         
-        glClearColor(0.0f, 0.0f, 0.0f, 1.0f);
+        glClearColor(0.0f, 0.0f, 0.0f, 1.0f); // space is black
         glClear(GL_COLOR_BUFFER_BIT);
         
         blackHole.draw(screenShader);

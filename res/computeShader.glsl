@@ -11,7 +11,7 @@ layout(rgba32f, binding = 0) uniform image2D outputImage;
 // ===============================
 // Uniforms
 // ===============================
-uniform vec2 resolutionVector;   // image_width, image_height
+uniform ivec2 resolutionVector;   // image_width, image_height
 uniform vec3 cameraPos;
 uniform mat4 invProjection;
 uniform mat4 invView;
@@ -160,7 +160,7 @@ vec3 disk_emission(float r, float inner_r, float outer_r, vec3 base_color, float
 // ===============================
 vec3 trace_ray(vec2 pixel) {
     // 1) Map pixel to NDC coordinates
-    vec2 uv = (pixel + 0.5) / resolutionVector;
+    vec2 uv = (vec2(pixel) + 0.5) / vec2(resolutionVector);
     vec2 ndc = vec2(uv.x * 2.0 - 1.0, -(uv.y * 2.0 - 1.0));
     
     // 2) Generate primary ray
@@ -238,7 +238,7 @@ void main() {
     ivec2 pixel = ivec2(gl_GlobalInvocationID.xy);
     
     // Check bounds
-    if (pixel.x >= int(resolutionVector.x) || pixel.y >= int(resolutionVector.y)) {
+    if (pixel.x >= (resolutionVector.x) || pixel.y >= (resolutionVector.y)) {
         return;
     }
     

@@ -15,6 +15,8 @@ private:
     unsigned int ID;
     bool isComputeShader;
 
+    glm::ivec2 resolutionVector;
+
     unsigned int getUniformLocations(const std::string &name);
     std::string readFromFile(const std::string &path);
     
@@ -23,8 +25,8 @@ private:
     unsigned int createComputeShader(const std::string &computeShader);
     
 public:
-    Shader(const std::string &vertexPath, const std::string &fragmentPath);
-    Shader(const std::string &computePath);
+    Shader(const std::string &vertexPath, const std::string &fragmentPath, glm::ivec2 resolutionVector);
+    Shader(const std::string &computePath, glm::ivec2 resolutionVector);
     ~Shader();
 
     void bind() const;
@@ -33,6 +35,7 @@ public:
     void memoryBarrier(unsigned int barriers) const;
 
     void setUniform1i(const std::string &name, int value);
+    void setUniform2i(const std::string &name, const glm::ivec2 &value);
     void setUniform1f(const std::string &name, float value);
     void setUniform2f(const std::string &name, float v0, float v1);
     void setUniform3f(const std::string &name, float v0, float v1, float v2);
