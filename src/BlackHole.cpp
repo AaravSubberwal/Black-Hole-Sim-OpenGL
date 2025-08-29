@@ -5,6 +5,16 @@ BlackHole::BlackHole(Shader *p_computeShader, glm::vec3 pos, float r, int width,
 {
     createOutputTexture();
     createScreenQuad();
+    
+    p_computeShader->setUniform3fv("bh_center", position);
+    p_computeShader->setUniform1f("Rs", radius);
+    p_computeShader->setUniform1f("diskInnerRadius", radius * 3.0f);     // ISCO for Schwarzschild
+    p_computeShader->setUniform1f("diskOuterRadius", radius * 20.0f);    
+    p_computeShader->setUniform3fv("diskColor", glm::vec3(1.0f, 0.3f, 0.05f)); // orange-red
+    p_computeShader->setUniform1f("diskIntensity", 2.0f);
+    p_computeShader->setUniform3fv("diskNormal", glm::vec3(0.0f, 1.0f, 0.0f)); // horizontal disk
+
+    glBindImageTexture(0, outputTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 }
 
 BlackHole::~BlackHole()
@@ -52,22 +62,6 @@ void BlackHole::createScreenQuad()
     glEnableVertexAttribArray(1);
     
     glBindVertexArray(0);
-}
-
-void BlackHole::setupCompute(Shader& computeShader)
-{
-    computeShader.bind();
-    
-    computeShader.setUniform3fv("bh_center", position);
-    computeShader.setUniform1f("Rs", radius);
-    computeShader.setUniform1f("diskInnerRadius", radius * 3.0f);     // ISCO for Schwarzschild
-    computeShader.setUniform1f("diskOuterRadius", radius * 20.0f);    
-    computeShader.setUniform3fv("diskColor", glm::vec3(1.0f, 0.3f, 0.05f)); // orange-red
-    computeShader.setUniform1f("diskIntensity", 2.0f);
-    computeShader.setUniform3fv("diskNormal", glm::vec3(0.0f, 1.0f, 0.0f)); // horizontal disk
-
-
-    glBindImageTexture(0, outputTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 }
 
 void BlackHole::draw(Shader& screenShader)

@@ -113,7 +113,6 @@ int main()
         glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
         glm::mat4 invView = glm::inverse(view);
         
-        blackHole.setupCompute(computeShader);
         computeShader.setUniform3fv("cameraPos", cameraPos);
         computeShader.setUniformMatrix4fv("invView", invView);
     

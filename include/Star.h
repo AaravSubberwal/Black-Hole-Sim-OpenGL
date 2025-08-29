@@ -15,8 +15,6 @@ public:
     Star(Shader *p_computeShader, glm::vec3 pos, float r, glm::vec3 color, float intens = 1.0f);
     ~Star() = default;
 
-    void setupCompute(Shader computeShader);
-    
     void setPosition(glm::vec3 pos) { position = pos; }
     void setRadius(float r) { radius = r; }
     void setEmissionColor(glm::vec3 color) { emissionColor = color; }
