@@ -9,8 +9,8 @@
 #include "BlackHole.h"
 #include "Star.h"
 
-const int RENDER_WIDTH = 512;
-const int RENDER_HEIGHT = 512;
+const int RENDER_WIDTH = 1280;
+const int RENDER_HEIGHT = 720;
 
 glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 5.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);

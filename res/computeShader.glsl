@@ -24,6 +24,13 @@ uniform float starRadius;
 uniform vec3 starEmissionColor;
 uniform float starIntensity;
 
+// Accretion disk parameters
+uniform float diskInnerRadius;   // typically ~3*Rs (ISCO)
+uniform float diskOuterRadius;   // typically ~20*Rs
+uniform vec3 diskColor;           // base color (orange/red)
+uniform float diskIntensity;      // brightness multiplier
+uniform vec3 diskNormal;          // disk plane normal (usually (0,1,0))
+
 // ===============================
 // Constants
 // ===============================
@@ -112,6 +119,42 @@ bool hit_star(vec3 pos3, vec3 star_ctr, float star_rad) {
     return length(pos3 - star_ctr) <= star_rad;
 }
 
+// Check if position intersects the accretion disk
+bool hit_disk(vec3 pos3, vec3 bh_ctr, vec3 disk_norm, float inner_r, float outer_r,
+              out float disk_r, out vec3 disk_pos) {
+    // Project position onto disk plane
+    vec3 to_pos = pos3 - bh_ctr;
+    float height = dot(to_pos, disk_norm);
+    
+    // Check if close to disk plane (thin disk approximation)
+    if (abs(height) > 0.01 * outer_r) {
+        return false;
+    }
+    
+    // Position in disk plane
+    disk_pos = pos3 - height * disk_norm;
+    vec3 radial = disk_pos - bh_ctr;
+    disk_r = length(radial);
+    
+    // Check if within disk radii
+    return disk_r >= inner_r && disk_r <= outer_r;
+}
+
+// Calculate disk emission based on radius (simple temperature profile)
+vec3 disk_emission(float r, float inner_r, float outer_r, vec3 base_color, float intensity) {
+    // Simple temperature profile: T ~ r^(-3/4) for thin disk
+    float t = (r - inner_r) / (outer_r - inner_r);
+    float temp_factor = pow(1.0 - t, 0.75);  // hotter near inner edge
+    
+    // Add some radial variation for visual interest
+    float variation = 0.8 + 0.2 * sin(r * 0.5);
+    
+    // Color shift: hotter = more blue/white
+    vec3 color = mix(base_color, vec3(1.0, 0.95, 0.85), temp_factor * 0.7);
+    
+    return color * intensity * temp_factor * variation;
+}
+
 // ===============================
 // Main Ray Tracing Function
 // ===============================
@@ -163,6 +206,15 @@ vec3 trace_ray(vec2 pixel) {
         // Check if hit star
         if (hit_star(pos3, starCenter, starRadius)) {
             return starEmissionColor * starIntensity;
+        }
+        
+        // Check if hit accretion disk
+        float disk_r;
+        vec3 disk_pos;
+        if (hit_disk(pos3, bh_center, diskNormal, diskInnerRadius, diskOuterRadius, 
+                     disk_r, disk_pos)) {
+            return disk_emission(disk_r, diskInnerRadius, diskOuterRadius, 
+                                diskColor, diskIntensity);
         }
         
         // Check if escaped to infinity
