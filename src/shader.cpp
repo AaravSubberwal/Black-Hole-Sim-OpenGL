@@ -72,7 +72,10 @@ unsigned int Shader::createShader(const string &vertexShader, const string &frag
     unsigned int program = glCreateProgram();
     unsigned int vs = compileShader(GL_VERTEX_SHADER, vertexShader);
     unsigned int fs = compileShader(GL_FRAGMENT_SHADER, fragmentShader);
-
+    if (vs == 0 || fs == 0) {
+        glDeleteProgram(program);
+        return 0; // fail early if compute shader didn't compile
+    }
     glAttachShader(program, vs);
     glAttachShader(program, fs);
     glLinkProgram(program);
@@ -89,6 +92,8 @@ unsigned int Shader::createShader(const string &vertexShader, const string &frag
         glGetProgramInfoLog(program, 512, NULL, infoLog);
         std::cerr << "ERROR::SHADER::PROGRAM::LINKING_FAILED\n"
                   << infoLog << std::endl;
+        glDeleteProgram(program);
+        program = 0;
     }
 
     return program;
@@ -98,7 +103,10 @@ unsigned int Shader::createComputeShader(const string &computeShader)
 {
     unsigned int program = glCreateProgram();
     unsigned int cs = compileShader(GL_COMPUTE_SHADER, computeShader);
-
+    if (cs == 0) {
+        glDeleteProgram(program);
+        return 0; // fail early if compute shader didn't compile
+    }
     glAttachShader(program, cs);
     glLinkProgram(program);
     glValidateProgram(program);
@@ -113,6 +121,8 @@ unsigned int Shader::createComputeShader(const string &computeShader)
         glGetProgramInfoLog(program, 512, NULL, infoLog);
         std::cerr << "ERROR::COMPUTE_SHADER::PROGRAM::LINKING_FAILED\n"
                   << infoLog << std::endl;
+        glDeleteProgram(program);
+        program = 0;
     }
     if (success)
     {
