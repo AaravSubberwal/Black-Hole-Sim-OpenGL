@@ -90,6 +90,7 @@ int main()
     
     Shader screenShader("res/vertexShader.glsl", "res/fragmentShader.glsl", resolutionVector);
     
+    computeShader.bind();
     Star star(p_computeShader, glm::vec3(3.0f, 2.0f, -5.0f), 1.5f, glm::vec3(1.0f, 0.9f, 0.7f), 2.0f);
     BlackHole blackHole(p_computeShader, glm::vec3(0.0f, 0.0f, 0.0f), star.getRadius() / 3.0f, RENDER_WIDTH, RENDER_HEIGHT);
     
@@ -113,6 +114,7 @@ int main()
         glm::mat4 view = glm::lookAt(cameraPos, cameraPos + cameraFront, cameraUp);
         glm::mat4 invView = glm::inverse(view);
         
+        computeShader.bind();
         computeShader.setUniform3fv("cameraPos", cameraPos);
         computeShader.setUniformMatrix4fv("invView", invView);
     

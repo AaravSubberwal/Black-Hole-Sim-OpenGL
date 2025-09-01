@@ -66,6 +66,7 @@ void BlackHole::createScreenQuad()
 
 void BlackHole::draw(Shader& screenShader)
 {
+    screenShader.bind();
     screenShader.setUniform1i("screenTexture", 0);
     
     glActiveTexture(GL_TEXTURE0);

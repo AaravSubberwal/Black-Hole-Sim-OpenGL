@@ -2,7 +2,8 @@
 
 using namespace std;
 
-Shader::Shader(const std::string &vertexPath, const std::string &fragmentPath, glm::ivec2 resolutionVector) : isComputeShader(false), resolutionVector(resolutionVector)
+Shader::Shader(const std::string &vertexPath, const std::string &fragmentPath, glm::ivec2 resolutionVector) 
+    : isComputeShader(false), resolutionVector(resolutionVector)
 {
     std::string vertexShader = readFromFile(vertexPath);
     std::string fragmentShader = readFromFile(fragmentPath);
@@ -13,7 +14,8 @@ Shader::Shader(const std::string &vertexPath, const std::string &fragmentPath, g
     }
 }
 
-Shader::Shader(const std::string &computePath, glm::ivec2 resolutionVector) : isComputeShader(true), resolutionVector(resolutionVector)
+Shader::Shader(const std::string &computePath, glm::ivec2 resolutionVector) 
+    : isComputeShader(true), resolutionVector(resolutionVector)
 {
     std::string computeShader = readFromFile(computePath);
     ID = createComputeShader(computeShader);
@@ -74,7 +76,7 @@ unsigned int Shader::createShader(const string &vertexShader, const string &frag
     unsigned int fs = compileShader(GL_FRAGMENT_SHADER, fragmentShader);
     if (vs == 0 || fs == 0) {
         glDeleteProgram(program);
-        return 0; // fail early if compute shader didn't compile
+        return 0;
     }
     glAttachShader(program, vs);
     glAttachShader(program, fs);
@@ -105,7 +107,7 @@ unsigned int Shader::createComputeShader(const string &computeShader)
     unsigned int cs = compileShader(GL_COMPUTE_SHADER, computeShader);
     if (cs == 0) {
         glDeleteProgram(program);
-        return 0; // fail early if compute shader didn't compile
+        return 0;
     }
     glAttachShader(program, cs);
     glLinkProgram(program);
@@ -168,68 +170,75 @@ unsigned int Shader::compileShader(unsigned int type, const std::string &source)
     return id;
 }
 
+// ===========================
+// Uniform Setters
+// ===========================
+
 void Shader::setUniform4f(const std::string &name, float v0, float v1, float v2, float v3)
 {
-    bind();
-    glUniform4f(getUniformLocations(name), v0, v1, v2, v3);
+    glUniform4f(getUniformLocation(name), v0, v1, v2, v3);
 }
 
 void Shader::setUniform1i(const std::string &name, int value)
 {
-    bind();
-    glUniform1i(getUniformLocations(name), value);
+    glUniform1i(getUniformLocation(name), value);
 }
 
 void Shader::setUniform2i(const std::string &name, const glm::ivec2 &value)
 {
-    bind();
-    glUniform2i(getUniformLocations(name), value.x, value.y);
+    glUniform2i(getUniformLocation(name), value.x, value.y);
 }
 
 void Shader::setUniformMatrix4fv(const std::string &name, glm::mat4 mat, bool transpose)
 {
-    bind();
-    glUniformMatrix4fv(getUniformLocations(name), 1, transpose, glm::value_ptr(mat));
+    glUniformMatrix4fv(getUniformLocation(name), 1, transpose, glm::value_ptr(mat));
 }
 
 void Shader::setUniform1f(const std::string &name, float value)
 {
-    bind();
-    glUniform1f(getUniformLocations(name), value);
+    glUniform1f(getUniformLocation(name), value);
 }
 
 void Shader::setUniform2f(const std::string &name, float v0, float v1)
 {
-    bind();
-    glUniform2f(getUniformLocations(name), v0, v1);
+    glUniform2f(getUniformLocation(name), v0, v1);
 }
 
 void Shader::setUniform3f(const std::string &name, float v0, float v1, float v2)
 {
-    bind();
-    glUniform3f(getUniformLocations(name), v0, v1, v2);
+    glUniform3f(getUniformLocation(name), v0, v1, v2);
 }
 
 void Shader::setUniform2fv(const std::string &name, const glm::vec2 &value)
 {
-    bind();
-    glUniform2fv(getUniformLocations(name), 1, glm::value_ptr(value));
+    glUniform2fv(getUniformLocation(name), 1, glm::value_ptr(value));
 }
 
 void Shader::setUniform3fv(const std::string &name, const glm::vec3 &value)
 {
-    bind();
-    glUniform3fv(getUniformLocations(name), 1, glm::value_ptr(value));
+    glUniform3fv(getUniformLocation(name), 1, glm::value_ptr(value));
 }
 
 void Shader::setUniform4fv(const std::string &name, const glm::vec4 &value)
 {
-    bind();
-    glUniform4fv(getUniformLocations(name), 1, glm::value_ptr(value));
+    glUniform4fv(getUniformLocation(name), 1, glm::value_ptr(value));
 }
 
-unsigned int Shader::getUniformLocations(const std::string &name)
+// ===========================
+// Uniform Location Caching
+// ===========================
+unsigned int Shader::getUniformLocation(const std::string &name)
 {
-    bind();
-    return glGetUniformLocation(ID, name.c_str());
+    // check cache first
+    if (uniformLocationCache.find(name) != uniformLocationCache.end())
+        return uniformLocationCache[name];
+
+    // query from OpenGL
+    GLint location = glGetUniformLocation(ID, name.c_str());
+    if (location == -1)
+    {
+        std::cerr << "Warning: uniform '" << name << "' doesn't exist or isn't used in shader!" << std::endl;
+    }
+    uniformLocationCache[name] = location;
+    return location;
 }

@@ -3,7 +3,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
-
+#include <unordered_map>
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -23,7 +23,9 @@ private:
     unsigned int compileShader(unsigned int type, const std::string &source);
     unsigned int createShader(const std::string &vertexShader, const std::string &fragmentShader);
     unsigned int createComputeShader(const std::string &computeShader);
-    
+    std::unordered_map<std::string, GLint> uniformLocationCache;
+
+    unsigned int getUniformLocation(const std::string &name);
 public:
     Shader(const std::string &vertexPath, const std::string &fragmentPath, glm::ivec2 resolutionVector);
     Shader(const std::string &computePath, glm::ivec2 resolutionVector);
