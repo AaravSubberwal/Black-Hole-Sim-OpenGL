@@ -1,4 +1,5 @@
 #include "Window.h"
+#include <stdexcept>
 
 void Window::framebuffer_size_callback(GLFWwindow *window, int width, int height)
 {
@@ -25,6 +26,7 @@ Window::Window(const unsigned int width, const unsigned int height) : WIN_WIDTH(
     if (!glfwInit())
     {
         cout << "Failed to initialize GLFW" << endl;
+        throw std::runtime_error("Failed to initialize GLFW");
     }
 
     glfwWindowHint(GLFW_SAMPLES, 4);
@@ -42,6 +44,7 @@ Window::Window(const unsigned int width, const unsigned int height) : WIN_WIDTH(
     {
         cout << "Failed to open GLFW window" << endl;
         glfwTerminate();
+        throw std::runtime_error("Failed to create GLFW window");
     }
     glfwMakeContextCurrent(window);
     glfwSwapInterval(1);
@@ -49,6 +52,7 @@ Window::Window(const unsigned int width, const unsigned int height) : WIN_WIDTH(
     if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
     {
         cout << "Failed to initialize GLAD" << endl;
+        throw std::runtime_error("Failed to initialize GLAD");
     }
 
 #ifdef DEBUG

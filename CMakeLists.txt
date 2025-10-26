@@ -33,6 +33,7 @@ set(SOURCES
     src/shader.cpp
     src/BlackHole.cpp
     src/Star.cpp
+    src/Camera.cpp
 )
 
 # Header files (for IDE organization)
@@ -41,6 +42,7 @@ set(HEADERS
     include/shader.h
     include/BlackHole.h
     include/Star.h
+    include/Camera.h
 )
 
 # GLAD
