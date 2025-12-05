@@ -39,7 +39,7 @@ int main()
     computeShader.setUniform2i("resolutionVector", resolutionVector);
     computeShader.setUniformMatrix4fv("invProjection", invProjection);
 
-    float lastFqrame = 0.0f;
+    float lastFrame = 0.0f;
     
     while (!glfwWindowShouldClose(window.p_GLFWwindow()))
     {
