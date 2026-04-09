@@ -8,7 +8,6 @@
 #include "AppPaths.h"
 #include "BlackHole.h"
 #include "Camera.h"
-#include "Star.h"
 #include "Window.h"
 #include "shader.h"
 
@@ -81,8 +80,7 @@ int main()
     computeShader.setUniform2i(computeUniforms.resolutionVector, resolutionVector);
     computeShader.setUniformMatrix4fv(computeUniforms.invProjection, invProjection);
 
-    Star star(&computeShader, glm::vec3(3.0f, 2.0f, -5.0f), 1.5f, glm::vec3(1.0f, 0.9f, 0.7f), 2.0f);
-    BlackHole blackHole(&computeShader, glm::vec3(0.0f, 0.0f, 0.0f), star.getRadius() / 3.0f, resolutionVector.x, resolutionVector.y);
+    BlackHole blackHole(&computeShader, glm::vec3(0.0f, 0.0f, 0.0f), 0.5f, resolutionVector.x, resolutionVector.y);
 
     screenShader.bind();
     screenShader.setUniform1i(screenShader.getUniformLocation("screenTexture"), 0);

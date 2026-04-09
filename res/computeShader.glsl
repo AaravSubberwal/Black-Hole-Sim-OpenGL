@@ -19,11 +19,6 @@ uniform mat4 invView;
 uniform vec3 bh_center;
 uniform float Rs;                 // Schwarzschild radius
 
-uniform vec3 starCenter;
-uniform float starRadius;
-uniform vec3 starEmissionColor;
-uniform float starIntensity;
-
 // Accretion disk parameters
 uniform float diskInnerRadius;   // typically ~3*Rs (ISCO)
 uniform float diskOuterRadius;   // typically ~20*Rs
@@ -42,7 +37,7 @@ const int max_phi_steps = 4000;
 const float dphi = 0.002;
 const float r_escape = 1e6;
 const float epsilon_horizon = 1e-4;
-const vec3 background_color = vec3(0.0);
+const vec3 background_color = vec3(0.003, 0.004, 0.008);
 const float EPSILON = 1e-12;
 
 // ===============================
@@ -118,9 +113,52 @@ vec2 rk4_step(float phi, vec2 y, float h, float M) {
     return y + (h / 6.0) * (k1 + 2.0 * k2 + 2.0 * k3 + k4);
 }
 
-// Check if position hits the star
-bool hit_star(vec3 pos3, vec3 star_ctr, float star_rad) {
-    return length(pos3 - star_ctr) <= star_rad;
+float hash13(vec3 p) {
+    p = fract(p * 0.1031);
+    p += dot(p, p.yzx + 33.33);
+    return fract((p.x + p.y) * p.z);
+}
+
+float hash12(vec2 p) {
+    vec3 p3 = fract(vec3(p.xyx) * 0.1031);
+    p3 += dot(p3, p3.yzx + 33.33);
+    return fract((p3.x + p3.y) * p3.z);
+}
+
+float noise2(vec2 p) {
+    vec2 i = floor(p);
+    vec2 f = fract(p);
+    vec2 u = f * f * (3.0 - 2.0 * f);
+
+    float a = hash12(i);
+    float b = hash12(i + vec2(1.0, 0.0));
+    float c = hash12(i + vec2(0.0, 1.0));
+    float d = hash12(i + vec2(1.0, 1.0));
+
+    return mix(mix(a, b, u.x), mix(c, d, u.x), u.y);
+}
+
+vec3 background_starfield(vec3 ray_dir) {
+    vec3 dir = normalize(ray_dir);
+    vec3 scaled = dir * 180.0;
+    vec3 cell = floor(scaled);
+    vec3 local = fract(scaled) - 0.5;
+
+    float star_seed = hash13(cell);
+    float star_mask = smoothstep(0.9945, 0.9995, star_seed);
+
+    float distance_from_cell_center = length(local);
+    float core = smoothstep(0.26, 0.0, distance_from_cell_center);
+    float glow = smoothstep(0.45, 0.0, distance_from_cell_center);
+    float brightness = star_mask * (1.4 * core + 0.35 * glow);
+
+    float color_seed = hash13(cell + vec3(19.7, 7.3, 3.1));
+    vec3 star_color = mix(vec3(1.0, 0.82, 0.72), vec3(0.72, 0.82, 1.0), color_seed);
+
+    float band = exp(-18.0 * dir.y * dir.y);
+    vec3 galactic_glow = vec3(0.025, 0.02, 0.035) * band;
+
+    return background_color + galactic_glow + star_color * brightness;
 }
 
 // Check if position intersects the accretion disk
@@ -145,16 +183,36 @@ bool hit_disk(vec3 pos3, vec3 bh_ctr, vec3 disk_norm, float inner_r, float outer
 }
 
 // Calculate disk emission based on radius (simple temperature profile)
-vec3 disk_emission(float r, float inner_r, float outer_r, vec3 base_color, float intensity) {
+vec3 disk_emission(vec3 disk_pos, vec3 bh_ctr, vec3 disk_norm,
+                   float r, float inner_r, float outer_r,
+                   vec3 base_color, float intensity) {
     // Simple temperature profile: T ~ r^(-3/4) for thin disk
     float t = (r - inner_r) / (outer_r - inner_r);
     float temp_factor = pow(1.0 - t, 0.75);  // hotter near inner edge
-    
-    // Add some radial variation for visual interest
-    float variation = 0.8 + 0.2 * sin(r * 0.5);
-    
-    // Color shift: hotter = more blue/white
-    vec3 color = mix(base_color, vec3(1.0, 0.95, 0.85), temp_factor * 0.7);
+
+    vec3 normal_dir = normalize(disk_norm);
+    vec3 basis_x = normalize(abs(normal_dir.y) < 0.9 ? cross(normal_dir, vec3(0.0, 1.0, 0.0))
+                                                     : cross(normal_dir, vec3(1.0, 0.0, 0.0)));
+    vec3 basis_z = normalize(cross(normal_dir, basis_x));
+    vec3 radial = disk_pos - bh_ctr;
+    vec2 local_uv = vec2(dot(radial, basis_x), dot(radial, basis_z));
+    local_uv /= outer_r;
+
+    float radial_coord = (r - inner_r) / max(outer_r - inner_r, EPSILON);
+    float turbulence = noise2(local_uv * 12.0);
+    turbulence += 0.5 * noise2(local_uv * 24.0);
+    turbulence /= 1.5;
+    float warped_radius = radial_coord + (turbulence * 0.06);
+
+    float banding = 0.5 + 0.5 * sin(warped_radius * 45.0);
+    banding *= 0.5 + 0.5 * sin(warped_radius * 15.0 + 0.8);
+    banding = pow(banding, 1.2);
+
+    float variation = mix(0.65, 1.4, banding) * mix(0.8, 1.2, turbulence);
+
+    vec3 hot_color = vec3(1.0, 0.95, 0.8);
+    float heat = clamp(temp_factor + banding * 0.25, 0.0, 1.0);
+    vec3 color = mix(base_color, hot_color, heat);
     
     return color * intensity * temp_factor * variation;
 }
@@ -239,17 +297,13 @@ vec3 trace_ray(vec2 pixel) {
             return vec3(0.0);  // Black hole absorption
         }
         
-        // Check if hit star
-        if (hit_star(pos3, starCenter, starRadius)) {
-            return starEmissionColor * starIntensity;
-        }
-        
         // Check if hit accretion disk
         float disk_r;
         vec3 disk_pos;
         if (hit_disk(pos3, bh_center, diskNormal, diskInnerRadius, diskOuterRadius, 
                      disk_r, disk_pos)) {
-            vec3 emission = disk_emission(disk_r, diskInnerRadius, diskOuterRadius, 
+            vec3 emission = disk_emission(disk_pos, bh_center, diskNormal,
+                                          disk_r, diskInnerRadius, diskOuterRadius, 
                                           diskColor, diskIntensity);
             if (enableDopplerBeaming != 0) {
                 emission *= disk_beaming_factor(disk_pos, bh_center, diskNormal, disk_r);
@@ -259,7 +313,7 @@ vec3 trace_ray(vec2 pixel) {
         
         // Check if escaped to infinity
         if (r >= r_escape) {
-            return background_color;
+            return background_starfield(pos3 - bh_center);
         }
         
         // RK4 integration step
@@ -268,7 +322,7 @@ vec3 trace_ray(vec2 pixel) {
     }
     
     // Max steps reached - return background
-    return background_color;
+    return background_starfield(ray_dir);
 }
 
 // ===============================

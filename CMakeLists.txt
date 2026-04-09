@@ -19,7 +19,6 @@ set(SOURCES
     src/Window.cpp
     src/shader.cpp
     src/BlackHole.cpp
-    src/Star.cpp
     src/Camera.cpp
 )
 
@@ -28,7 +27,6 @@ set(HEADERS
     include/Window.h
     include/shader.h
     include/BlackHole.h
-    include/Star.h
     include/Camera.h
 )
 
