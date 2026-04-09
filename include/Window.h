@@ -1,28 +1,37 @@
 #pragma once
-#include <iostream>
+
+#include <string>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-
-using namespace std;
 
 class Window
 {
 private:
     static void framebuffer_size_callback(GLFWwindow *window, int width, int height);
-    static void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id, 
-                                     GLenum severity, GLsizei length, 
-                                     const char *message, const void *userParam);
-    
+    static void APIENTRY glDebugOutput(GLenum source, GLenum type, unsigned int id,
+                                       GLenum severity, GLsizei length,
+                                       const char *message, const void *userParam);
+
     GLFWwindow *window;
-    const unsigned int WIN_WIDTH;
-    const unsigned int WIN_HEIGTH;
+    const unsigned int width;
+    const unsigned int height;
+    bool glfwInitialized;
+    std::string lastError;
+
+    bool initializeGlfw();
+    bool createContext();
+    bool initializeGlad();
+    bool validateRuntimeCapabilities();
+    void shutdown();
 
 public:
-    inline GLFWwindow *p_GLFWwindow() { return window; }
-    inline unsigned int getWidth() { return WIN_WIDTH; }
-    inline unsigned int getHeight() { return WIN_HEIGTH; }
-
-    Window(const unsigned int width, const unsigned int height);
+    Window(unsigned int width, unsigned int height);
     ~Window();
+
+    bool initialize();
+    GLFWwindow *p_GLFWwindow() const { return window; }
+    unsigned int getWidth() const { return width; }
+    unsigned int getHeight() const { return height; }
+    const std::string &getLastError() const { return lastError; }
 };

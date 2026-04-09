@@ -1,7 +1,7 @@
 #include "BlackHole.h"
 
 BlackHole::BlackHole(Shader *p_computeShader, glm::vec3 pos, float r, int width, int height) 
-    : position(pos), radius(r), textureWidth(width), textureHeight(height)
+    : position(pos), radius(r), outputTexture(0), screenVAO(0), screenVBO(0), textureWidth(width), textureHeight(height)
 {
     createOutputTexture();
     createScreenQuad();
@@ -36,6 +36,27 @@ void BlackHole::createOutputTexture()
     glBindTexture(GL_TEXTURE_2D, 0);
 }
 
+void BlackHole::resizeOutputTexture(int width, int height)
+{
+    if (width <= 0 || height <= 0)
+    {
+        return;
+    }
+
+    if (textureWidth == width && textureHeight == height)
+    {
+        return;
+    }
+
+    textureWidth = width;
+    textureHeight = height;
+
+    glBindTexture(GL_TEXTURE_2D, outputTexture);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA32F, textureWidth, textureHeight, 0, GL_RGBA, GL_FLOAT, nullptr);
+    glBindTexture(GL_TEXTURE_2D, 0);
+    glBindImageTexture(0, outputTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
+}
+
 void BlackHole::createScreenQuad()
 {
     float quadVertices[] = {
@@ -67,8 +88,6 @@ void BlackHole::createScreenQuad()
 void BlackHole::draw(Shader& screenShader)
 {
     screenShader.bind();
-    screenShader.setUniform1i("screenTexture", 0);
-    
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_2D, outputTexture);
     
