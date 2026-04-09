@@ -1,5 +1,7 @@
 #pragma once
 
+#include <array>
+
 #include <glm/glm.hpp>
 #include <glm/gtc/matrix_transform.hpp>
 #include <GLFW/glfw3.h>
@@ -27,9 +29,11 @@ private:
     float m_lastX;
     float m_lastY;
     bool m_firstMouse;
+    std::array<bool, 4> m_presetKeyPressed;
     
     float m_movementSpeed;
     float m_mouseSensitivity;
     
     void updateCameraVectors();
+    void snapToView(GLFWwindow *window, const glm::vec3 &position, const glm::vec3 &target);
 };

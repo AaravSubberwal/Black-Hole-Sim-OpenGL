@@ -13,6 +13,10 @@ BlackHole::BlackHole(Shader *p_computeShader, glm::vec3 pos, float r, int width,
     p_computeShader->setUniform3fv("diskColor", glm::vec3(1.0f, 0.3f, 0.05f)); // orange-red
     p_computeShader->setUniform1f("diskIntensity", 2.0f);
     p_computeShader->setUniform3fv("diskNormal", glm::vec3(0.0f, 1.0f, 0.0f)); // horizontal disk
+    p_computeShader->setUniform1f("diskBetaInner", 0.42f);
+    p_computeShader->setUniform1f("diskBetaMax", 0.45f);
+    p_computeShader->setUniform1f("dopplerStrength", 0.85f);
+    p_computeShader->setUniform1i("enableDopplerBeaming", 1);
 
     glBindImageTexture(0, outputTexture, 0, GL_FALSE, 0, GL_WRITE_ONLY, GL_RGBA32F);
 }

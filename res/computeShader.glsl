@@ -30,6 +30,10 @@ uniform float diskOuterRadius;   // typically ~20*Rs
 uniform vec3 diskColor;           // base color (orange/red)
 uniform float diskIntensity;      // brightness multiplier
 uniform vec3 diskNormal;          // disk plane normal (usually (0,1,0))
+uniform float diskBetaInner;      // signed orbital speed at inner edge, in units of c
+uniform float diskBetaMax;        // cap for orbital speed, in units of c
+uniform float dopplerStrength;    // blends between no beaming and full beaming
+uniform int enableDopplerBeaming;
 
 // ===============================
 // Constants
@@ -155,6 +159,38 @@ vec3 disk_emission(float r, float inner_r, float outer_r, vec3 base_color, float
     return color * intensity * temp_factor * variation;
 }
 
+float disk_beaming_factor(vec3 disk_pos, vec3 bh_ctr, vec3 disk_norm, float disk_r) {
+    vec3 radial = disk_pos - bh_ctr;
+    float radial_len = length(radial);
+    if (radial_len <= EPSILON) {
+        return 1.0;
+    }
+
+    vec3 radial_dir = radial / radial_len;
+    vec3 normal_dir = normalize(disk_norm);
+    vec3 tangential_dir = cross(normal_dir, radial_dir);
+    float tangential_len = length(tangential_dir);
+    if (tangential_len <= EPSILON) {
+        return 1.0;
+    }
+
+    tangential_dir /= tangential_len;
+
+    float beta = clamp(abs(diskBetaInner) * sqrt(diskInnerRadius / max(disk_r, diskInnerRadius)),
+                       0.0,
+                       diskBetaMax);
+    tangential_dir *= sign(diskBetaInner == 0.0 ? 1.0 : diskBetaInner);
+
+    vec3 view_dir = normalize(cameraPos - disk_pos);
+    float cos_theta = clamp(dot(tangential_dir, view_dir), -0.999, 0.999);
+    float numerator = sqrt(max(1.0 - beta * beta, 1e-4));
+    float denominator = max(1.0 - beta * cos_theta, 0.05);
+    float doppler_factor = numerator / denominator;
+    float beaming = pow(max(doppler_factor, 0.0), 3.0);
+
+    return mix(1.0, min(beaming, 8.0), clamp(dopplerStrength, 0.0, 1.0));
+}
+
 // ===============================
 // Main Ray Tracing Function
 // ===============================
@@ -213,8 +249,12 @@ vec3 trace_ray(vec2 pixel) {
         vec3 disk_pos;
         if (hit_disk(pos3, bh_center, diskNormal, diskInnerRadius, diskOuterRadius, 
                      disk_r, disk_pos)) {
-            return disk_emission(disk_r, diskInnerRadius, diskOuterRadius, 
-                                diskColor, diskIntensity);
+            vec3 emission = disk_emission(disk_r, diskInnerRadius, diskOuterRadius, 
+                                          diskColor, diskIntensity);
+            if (enableDopplerBeaming != 0) {
+                emission *= disk_beaming_factor(disk_pos, bh_center, diskNormal, disk_r);
+            }
+            return emission;
         }
         
         // Check if escaped to infinity

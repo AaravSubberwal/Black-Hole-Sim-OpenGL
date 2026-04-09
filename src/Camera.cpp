@@ -9,6 +9,7 @@ Camera::Camera(glm::vec3 position)
     , m_lastX(640.0f)
     , m_lastY(360.0f)
     , m_firstMouse(true)
+    , m_presetKeyPressed{false, false, false, false}
     , m_movementSpeed(2.5f)
     , m_mouseSensitivity(0.1f)
 {
@@ -41,6 +42,31 @@ void Camera::processInput(GLFWwindow* window, float deltaTime)
         m_position -= m_up * velocity;
     if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
         m_position += m_up * velocity;
+
+    const int presetKeys[4] = {
+        GLFW_KEY_1,
+        GLFW_KEY_2,
+        GLFW_KEY_3,
+        GLFW_KEY_4
+    };
+
+    const glm::vec3 presetPositions[4] = {
+        glm::vec3(6.0f, 4.0f, 6.0f),
+        glm::vec3(0.0f, 0.35f, 8.0f),
+        glm::vec3(0.0f, 8.0f, 0.01f),
+        glm::vec3(1.2f, 0.25f, 2.0f)
+    };
+
+    for (int i = 0; i < 4; ++i)
+    {
+        const bool isPressed = glfwGetKey(window, presetKeys[i]) == GLFW_PRESS;
+        if (isPressed && !m_presetKeyPressed[static_cast<std::size_t>(i)])
+        {
+            snapToView(window, presetPositions[i], glm::vec3(0.0f));
+        }
+
+        m_presetKeyPressed[static_cast<std::size_t>(i)] = isPressed;
+    }
 }
 
 void Camera::mouse_callback(GLFWwindow* window, double xpos, double ypos)
@@ -81,4 +107,21 @@ void Camera::updateCameraVectors()
     front.y = sin(glm::radians(m_pitch));
     front.z = sin(glm::radians(m_yaw)) * cos(glm::radians(m_pitch));
     m_front = glm::normalize(front);
+}
+
+void Camera::snapToView(GLFWwindow *window, const glm::vec3 &position, const glm::vec3 &target)
+{
+    m_position = position;
+
+    const glm::vec3 direction = glm::normalize(target - m_position);
+    m_yaw = glm::degrees(atan2(direction.z, direction.x));
+    m_pitch = glm::degrees(asin(glm::clamp(direction.y, -1.0f, 1.0f)));
+    updateCameraVectors();
+
+    double cursorX = 0.0;
+    double cursorY = 0.0;
+    glfwGetCursorPos(window, &cursorX, &cursorY);
+    m_lastX = static_cast<float>(cursorX);
+    m_lastY = static_cast<float>(cursorY);
+    m_firstMouse = false;
 }
